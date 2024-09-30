@@ -68,7 +68,7 @@ void deleting_a_cache(cache* cache) {
  //errors appeared due to referencing number of steps not numbers that reach to one
 void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one, char* wanted) {
     if (cache->number_of_elements >= cache->max_capacity) {
-        if (wanted == "l") {
+        if (wanted[0] == 'l') {
             removing_with_lru(cache);
         } else {
             removing_with_rr(cache);
