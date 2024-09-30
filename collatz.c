@@ -48,81 +48,6 @@ unsigned int hash(int number_of_callatz_steps, int max_capacity) {
     return number_of_callatz_steps % max_capacity;
 }
 
-void deleting_a_cache(cache* cache) {
-        for (int i = 0; i < cache->max_capacity; i++) {
-            cachenode* node = cache->hash_table[i];
-            while (node) {
-                cachenode* temp_for_node = node;
-                node = node->next;
-                free(temp_for_node);
-            }
-        }
-        while (cache->head != NULL) {
-            cachenode* temporary = cache->head;
-            cache->head = cache->head->next;
-            free(temporary);
-        }
-        free(cache->hash_table);
-        free(cache);
-}
- //errors appeared due to referencing number of steps not numbers that reach to one
-void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one, char* wanted) {
-    if (cache->number_of_elements >= cache->max_capacity) {
-        if (wanted[0] == 'l') {
-            removing_with_lru(cache);
-        } else {
-            removing_with_rr(cache);
-        }
-    }
-
-    unsigned int index = hash(number_of_callatz_steps, cache->max_capacity);
-    cachenode* new_node = (cachenode*)malloc(sizeof(cachenode));
-    
-    new_node->number_of_callatz_steps = number_of_callatz_steps;
-    //error was happening here
-    new_node->numbers_that_reach_to_one = numbers_that_reach_to_one;
-    new_node->next = cache->hash_table[index];
-    cache->hash_table[index] = new_node;
-    cache->number_of_elements++;
-
-    new_node->previous = NULL;
-    new_node->next = cache->head;
-    if (cache->head != NULL) {
-        cache->head->previous = new_node;
-    }
-    cache->head = new_node;
-    if(cache->tail == NULL) {
-        cache->tail = new_node;
-    }
-}
-
-int get_cache(cache* cache, int number_of_callatz_steps) {
-    unsigned int index = hash(number_of_callatz_steps, cache->number_of_elements);
-    cachenode* node = cache->hash_table[index];
-    while (node != NULL) {
-        if (node->number_of_callatz_steps == number_of_callatz_steps) {
-            cache->hit_count++;
-            move_to_the_front_for_LRU(cache, node);
-            return node->numbers_that_reach_to_one;
-        }
-        node = node->next;
-    }
-    cache->miss_count++;
-    return -1;
-}
-
-int calculcating_steps(int n) {
-    int number_of_steps = 0;
-    while (n != 1) {
-        if (n % 2 == 0) {
-            n = n / 2;
-        } else {
-            n = 3 * (n + 1);
-        }
-        number_of_steps++;
-    }
-    return number_of_steps;
-}
 //replacement for fifo, realized when rereading the assignment...
 //assumed to be allowed a choice when skimmping the section of the code
 void removing_with_lru(cache* cache) {
@@ -219,6 +144,82 @@ void move_to_the_front_for_LRU(cache* cache, cachenode* node) {
     if (cache->tail == NULL) {
         cache->tail = node;
     }
+}
+
+void deleting_a_cache(cache* cache) {
+        for (int i = 0; i < cache->max_capacity; i++) {
+            cachenode* node = cache->hash_table[i];
+            while (node) {
+                cachenode* temp_for_node = node;
+                node = node->next;
+                free(temp_for_node);
+            }
+        }
+        while (cache->head != NULL) {
+            cachenode* temporary = cache->head;
+            cache->head = cache->head->next;
+            free(temporary);
+        }
+        free(cache->hash_table);
+        free(cache);
+}
+ //errors appeared due to referencing number of steps not numbers that reach to one
+void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one, char* wanted) {
+    if (cache->number_of_elements >= cache->max_capacity) {
+        if (wanted[0] == 'l') {
+            removing_with_lru(cache);
+        } else {
+            removing_with_rr(cache);
+        }
+    }
+
+    unsigned int index = hash(number_of_callatz_steps, cache->max_capacity);
+    cachenode* new_node = (cachenode*)malloc(sizeof(cachenode));
+    
+    new_node->number_of_callatz_steps = number_of_callatz_steps;
+    //error was happening here
+    new_node->numbers_that_reach_to_one = numbers_that_reach_to_one;
+    new_node->next = cache->hash_table[index];
+    cache->hash_table[index] = new_node;
+    cache->number_of_elements++;
+
+    new_node->previous = NULL;
+    new_node->next = cache->head;
+    if (cache->head != NULL) {
+        cache->head->previous = new_node;
+    }
+    cache->head = new_node;
+    if(cache->tail == NULL) {
+        cache->tail = new_node;
+    }
+}
+
+int get_cache(cache* cache, int number_of_callatz_steps) {
+    unsigned int index = hash(number_of_callatz_steps, cache->number_of_elements);
+    cachenode* node = cache->hash_table[index];
+    while (node != NULL) {
+        if (node->number_of_callatz_steps == number_of_callatz_steps) {
+            cache->hit_count++;
+            move_to_the_front_for_LRU(cache, node);
+            return node->numbers_that_reach_to_one;
+        }
+        node = node->next;
+    }
+    cache->miss_count++;
+    return -1;
+}
+
+int calculcating_steps(int n) {
+    int number_of_steps = 0;
+    while (n != 1) {
+        if (n % 2 == 0) {
+            n = n / 2;
+        } else {
+            n = 3 * (n + 1);
+        }
+        number_of_steps++;
+    }
+    return number_of_steps;
 }
 
 int main(int argc, char* argv[]) {
