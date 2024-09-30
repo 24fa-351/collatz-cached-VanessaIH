@@ -267,7 +267,7 @@ int main(int argc, char* argv[]) {
         total_time += (double)(clock() - start) / CLOCKS_PER_SEC;
         //could be one line, but this is personal preferred formatting
         printf("Random Number: %d\n", random_number);
-        printf("Steps: %d", steps);
+        printf("Steps: %d\n", steps);
     }
     double mean_time = total_time / N;
     double cache_hit_count = (double)cache->hit_count / (cache->hit_count + cache->miss_count) * 100;
