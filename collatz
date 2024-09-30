@@ -3,11 +3,15 @@
 #include <time.h>
 #include <string.h>
 
+//tend to not write comments, working on adding more for study purposes later on
+//comments are mainly added at the end(orginal comments are more abstract and error code)
+
 //typedef is struct MyStruct(idea is still a bit confusing)
 typedef struct cachenode {
     int number_of_callatz_steps;
     int numbers_that_reach_to_one;
     struct cachenode* next;
+    struct cachenode* previous;
 }   cachenode;
 
 typedef struct cache {
@@ -16,7 +20,8 @@ typedef struct cache {
     int max_capacity;
     int hit_count;
     int miss_count;
-    cachenode* deletion_list;
+    cachenode* head;
+    cachenode* tail;
 } cache;
 
 cache* making_a_new_cach(int max_capacity) {
@@ -34,7 +39,8 @@ cache* making_a_new_cach(int max_capacity) {
     new_cache->max_capacity = max_capacity;
     new_cache->hit_count = 0;
     new_cache->miss_count = 0;
-    new_cache->deletion_list = NULL;
+    new_cache->head = NULL;
+    new_cache->tail = NULL;
     return new_cache;
 }
 
@@ -51,13 +57,20 @@ void deleting_a_cache(cache* cache) {
                 free(temp_for_node);
             }
         }
+        while (cache->head != NULL) {
+            cachenode* temporary = cache->head;
+            cache->head = cache->head->next;
+            free(temporary);
+        }
         free(cache->hash_table);
         free(cache);
 }
  //errors appeared due to referencing number of steps not numbers that reach to one
 void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one) {
     if (cache->number_of_elements >= cache->max_capacity) {
-        removing_cache_with_fifo_and_lru(cache);
+        removing_with_lru(cache);
+        //manually switching
+        //removing_eith_rr(cache);
     }
 
     unsigned int index = hash(number_of_callatz_steps, cache->max_capacity);
@@ -70,8 +83,15 @@ void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach
     cache->hash_table[index] = new_node;
     cache->number_of_elements++;
 
-    new_node->next = cache->deletion_list;
-    cache->deletion_list = new_node;
+    new_node->previous = NULL;
+    new_node->next = cache->head;
+    if (cache->head != NULL) {
+        cache->head->previous = new_node;
+    }
+    cache->head = new_node;
+    if(cache->tail == NULL) {
+        cache->tail = new_node;
+    }
 }
 
 int get_cache(cache* cache, int number_of_callatz_steps) {
@@ -80,6 +100,7 @@ int get_cache(cache* cache, int number_of_callatz_steps) {
     while (node != NULL) {
         if (node->number_of_callatz_steps == number_of_callatz_steps) {
             cache->hit_count++;
+            move_to_the_front_for_LRU(cache, node);
             return node->numbers_that_reach_to_one;
         }
         node = node->next;
@@ -98,33 +119,103 @@ int calculcating_steps(int n) {
         }
         number_of_steps++;
     }
+    return number_of_steps;
+}
+//replacement for fifo, realized when rereading the assignment...
+//assumed to be allowed a choice when skimmping the section of the code
+void removing_with_lru(cache* cache) {
+    if (cache->tail == NULL) {
+        return;
+    }
+    cachenode* old_cache = cache->tail;
+    cache->tail = old_cache->previous;
+
+    if (cache->tail != NULL) {
+        cache->tail->next = NULL;
+    } else {
+        cache->head = NULL;
+    }
+    //reusing code from trashed fifo, errors arised to to different labels to fit new format
+    unsigned int index = hash(old_cache->numbers_that_reach_to_one, cache->max_capacity);
+    cachenode* new_node = cache->hash_table[index];
+    cachenode* previous_node = NULL;
+    while (new_node != NULL) {
+        if (new_node->numbers_that_reach_to_one == old_cache->numbers_that_reach_to_one) {
+            if (previous_node == NULL) {
+                cache->hash_table[index] = new_node->next;
+            } else {
+                previous_node->next = new_node->next;
+            }
+            free(new_node);
+            break;
+        }
+        previous_node = new_node;
+        new_node = new_node->next;
+    }
+    cache->number_of_elements--;
+    //created an extra node, clean up(not needed in rr)
+    free(old_cache);
 }
 
-void removing_cache_with_fifo_and_lru(cache* cache) {
-    //reference to 131
-    if (cache->deletion_list != NULL) {
-        cachenode* old_cache = cache->deletion_list;
-        cache->deletion_list = cache->deletion_list->next;
-        //error with max_cap, cachenode does not hold max_cap
-        unsigned int index = hash(old_cache->number_of_callatz_steps, cache->max_capacity);
-        cachenode* node = cache->hash_table[index];
-        cachenode* pervious_node = NULL;
-
-        while (node != NULL) {
-            if (node->number_of_callatz_steps == old_cache->number_of_callatz_steps) {
-                if (pervious_node == NULL) {
-                    cache->hash_table[index] = node->next;
-                } else {
-                    pervious_node->next = node->next;
-                }
-                free(node);
-                break;
-            }
-            pervious_node = node;
-            node = node->next;
+void removing_with_rr(cache* cache) {
+    if (cache->number_of_elements == 0) {
+        return;
+    }
+    int random_index = rand() % cache->max_capacity;
+    cachenode* new_node = cache->hash_table[random_index];
+    if (new_node == NULL) {
+        return;
+    }
+    int count = 0;
+    cachenode* holder_for_random_index_node = NULL;
+    while (new_node != NULL) {
+        if (rand() % (++count) == 0) {
+            holder_for_random_index_node = new_node;
         }
-        cache->number_of_elements--;
-        free(old_cache);
+    }
+    new_node = new_node->next;
+    //reusing code from removing_with_lru, changes in the labling
+    if (holder_for_random_index_node != NULL) {
+        unsigned int index = hash(holder_for_random_index_node->numbers_that_reach_to_one, cache->max_capacity);
+        new_node = cache->hash_table[index];
+        cachenode* previous_node = NULL;
+        while (new_node != NULL) {
+            if (new_node != NULL) {
+                if (previous_node == NULL) {
+                    cache->hash_table[index] = new_node->next;
+                } else {
+                    previous_node->next = new_node->next;
+                }
+                free(new_node);
+                cache->number_of_elements--;
+                return;
+            }
+            previous_node = new_node;
+            new_node = new_node->next;
+        }
+    }
+}
+
+void move_to_the_front_for_LRU(cache* cache, cachenode* node) {
+    if (node == cache->head) {
+        return;
+    } else if (node == cache->tail) {
+        cache->tail = node->previous;
+        cache->tail->next = NULL;
+    } else {
+        node->previous->next = node->next;
+        if (node->next != NULL) {
+            node->next->previous = node->previous;
+        }
+    }
+    node->next = cache->head;
+    node->previous = NULL;
+    if (cache->head != NULL) {
+        cache->head->previous = node;
+    }
+    cache->head = node;
+    if (cache->tail == NULL) {
+        cache->tail = node;
     }
 }
 
