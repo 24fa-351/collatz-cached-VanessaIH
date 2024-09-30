@@ -66,11 +66,13 @@ void deleting_a_cache(cache* cache) {
         free(cache);
 }
  //errors appeared due to referencing number of steps not numbers that reach to one
-void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one) {
+void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one, char* wanted) {
     if (cache->number_of_elements >= cache->max_capacity) {
-        removing_with_lru(cache);
-        //manually switching
-        //removing_eith_rr(cache);
+        if (wanted == "l") {
+            removing_with_lru(cache);
+        } else {
+            removing_with_rr(cache);
+        }
     }
 
     unsigned int index = hash(number_of_callatz_steps, cache->max_capacity);
@@ -220,7 +222,7 @@ void move_to_the_front_for_LRU(cache* cache, cachenode* node) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc != 5) {
+    if (argc != 6) {
         printf("Not enough arguements.");
         return 1;
     }
@@ -229,6 +231,7 @@ int main(int argc, char* argv[]) {
     int MIN = atoi(argv[2]);
     int MAX = atoi(argv[3]);
     int size_of_cache = atoi(argv[4]);
+    char* function = argv[5];
 
     cache* cache = making_a_new_cach(size_of_cache);
     double total_time = 0;
@@ -244,7 +247,7 @@ int main(int argc, char* argv[]) {
         int steps = get_cache(cache, random_number);
         if (steps -= 1) {
             steps = calculcating_steps(random_number);
-            put_cache(cache, random_number, steps);
+            put_cache(cache, random_number, steps, function);
         }
         //clocks_per_sec converts and (double) makes the format into doubles
         total_time += (double)(clock() - start) / CLOCKS_PER_SEC;
