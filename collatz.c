@@ -202,7 +202,7 @@ void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach
 }
 
 int get_cache(cache* cache, int number_of_callatz_steps) {
-    unsigned int index = hash(number_of_callatz_steps, cache->number_of_elements);
+    unsigned int index = hash(number_of_callatz_steps, cache->max_capacity);
     cachenode* node = cache->hash_table[index];
     while (node != NULL) {
         if (node->number_of_callatz_steps == number_of_callatz_steps) {
@@ -259,7 +259,7 @@ int main(int argc, char* argv[]) {
         clock_t start = clock();
 
         int steps = get_cache(cache, random_number);
-        if (steps -= 1) {
+        if (steps == -1) {
             steps = calculcating_steps(random_number);
             put_cache(cache, random_number, steps, function);
         }
