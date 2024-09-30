@@ -25,6 +25,9 @@ typedef struct cache {
 } cache;
 
 cache* making_a_new_cach(int max_capacity) {
+    if (max_capacity <= 0) {
+        return NULL;
+    }
     //malloc is memory allocation, allocing the size of the cache
     cache* new_cache = (cache*)malloc(sizeof(cache));
 
@@ -44,7 +47,11 @@ cache* making_a_new_cach(int max_capacity) {
     return new_cache;
 }
 
+//gdb signalled arithmetic exception, adding in checkers to kill system to satisfy
 unsigned int hash(int number_of_callatz_steps, int max_capacity) {
+    if (max_capacity == 0) {
+        exit(EXIT_FAILURE);
+    }
     return number_of_callatz_steps % max_capacity;
 }
 
@@ -234,9 +241,15 @@ int main(int argc, char* argv[]) {
     int size_of_cache = atoi(argv[4]);
     char* function = argv[5];
 
+    if(size_of_cache <= 0) {
+        return 1;
+    }
     cache* cache = making_a_new_cach(size_of_cache);
     double total_time = 0;
 
+    if (!cache) {
+        return 1;
+    }
     srand(time(NULL));
 
     for (int i = 0; i < N; i++) {
