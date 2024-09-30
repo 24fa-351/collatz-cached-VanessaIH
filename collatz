@@ -1,0 +1,162 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+
+typedef struct cachenode {
+    int number_of_callatz_steps;
+    int numbers_that_reach_to_one;
+    struct cachenode* next;
+}   cachenode;
+
+typedef struct cache {
+    cachenode** hash_table;
+    int number_of_elements;
+    int max_capacity;
+    int hit_count;
+    int miss_count;
+    cachenode* deletion_list;
+} cache;
+
+cache* making_a_new_cach(int max_capacity) {
+    cache* new_cache = (cache*)malloc(sizeof(cache));
+
+    if(!new_cache) {
+        return NULL;
+    }
+    new_cache->hash_table = (cachenode**)malloc(sizeof(cachenode*) * max_capacity);
+    for (int i = 0; i < max_capacity; i++) {
+        new_cache->hash_table[i] = NULL;
+    }
+    new_cache->number_of_elements = 0;
+    new_cache->max_capacity = max_capacity;
+    new_cache->hit_count = 0;
+    new_cache->miss_count = 0;
+    new_cache->deletion_list = NULL;
+    return new_cache;
+}
+
+unsigned int hash(int number_of_callatz_steps, int max_capacity) {
+    return number_of_callatz_steps % max_capacity;
+}
+
+void deleting_a_cache(cache* cache) {
+        for (int i = 0; i < cache->max_capacity; i++) {
+            cachenode* node = cache->hash_table[i];
+            while (node) {
+                cachenode* temp_for_node = node;
+                node = node->next;
+                free(temp_for_node);
+            }
+        }
+        free(cache->hash_table);
+        free(cache);
+}
+
+void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one) {
+    if (cache->number_of_elements >= cache->max_capacity) {
+        removing_cache_with_fifo_and_lru(cache);
+    }
+
+    unsigned int index = hash(number_of_callatz_steps, cache->max_capacity);
+    cachenode* new_node = (cachenode*)malloc(sizeof(cachenode));
+    new_node->number_of_callatz_steps = number_of_callatz_steps;
+    new_node->numbers_that_reach_to_one = numbers_that_reach_to_one;
+    new_node->next = cache->hash_table[index];
+    cache->hash_table[index] = new_node;
+    cache->number_of_elements++;
+
+    new_node->next = cache->deletion_list;
+    cache->deletion_list = new_node;
+}
+
+int get_cache(cache* cache, int number_of_callatz_steps) {
+    unsigned int index = hash(number_of_callatz_steps, cache->number_of_elements);
+    cachenode* node = cache->hash_table[index];
+    while (node != NULL) {
+        if (node->number_of_callatz_steps == number_of_callatz_steps) {
+            cache->hit_count++;
+            return node->numbers_that_reach_to_one;
+        }
+        node = node->next;
+    }
+    cache->miss_count++;
+    return -1;
+}
+
+int calculcating_steps(int n) {
+    int number_of_steps = 0;
+    while (n != 1) {
+        if (n % 2 == 0) {
+            n = n / 2;
+        } else {
+            n = 3 * (n + 1);
+        }
+        number_of_steps++;
+    }
+}
+
+void removing_cache_with_fifo_and_lru(cache* cache) {
+    if (cache->deletion_list != NULL) {
+        cachenode* old_cache = cache->deletion_list;
+        cache->deletion_list = cache->deletion_list->next;
+        //error with max_cap, cachenode does not hold max_cap
+        unsigned int index = hash(old_cache->number_of_callatz_steps, cache->max_capacity);
+        cachenode* node = cache->hash_table[index];
+        cachenode* pervious_node = NULL;
+
+        while (node != NULL) {
+            if (node->number_of_callatz_steps == old_cache->number_of_callatz_steps) {
+                if (pervious_node == NULL) {
+                    cache->hash_table[index] = node->next;
+                } else {
+                    pervious_node->next = node->next;
+                }
+                free(node);
+                break;
+            }
+            pervious_node = node;
+            node = node->next;
+        }
+        cache->number_of_elements--;
+        free(old_cache);
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 5) {
+        printf("Not enough arguements.");
+        return 1;
+    }
+
+    int N = atoi(argv[1]);
+    int MIN = atoi(argv[2]);
+    int MAX = atoi(argv[3]);
+    int size_of_cache = atoi(argv[4]);
+
+    cache* cache = making_a_new_cach(size_of_cache);
+    double total_time = 0;
+
+    srand(time(NULL));
+
+    for (int i = 0; i < N; i++) {
+        int random_number = rand() % (MAX - MIN + 1) + MIN;
+        clock_t start = clock();
+
+        int steps = get_cache(cache, random_number);
+        if (steps -= 1) {
+            steps = calculcating_steps(random_number);
+            put_cache(cache, random_number, steps);
+        }
+        total_time += (double)(clock() - start) / CLOCKS_PER_SEC;
+        printf("Random Number: %d\n", random_number);
+        printf("Steps: %d", steps);
+    }
+    double mean_time = total_time / N;
+    double cache_hit_count = (double)cache->hit_count / (cache->hit_count + cache->miss_count) * 100;
+    printf("Meantime: %.3f seconds\n", mean_time);
+    printf("Cache Hit Count: %.3f%%\n", cache_hit_count);
+
+    deleting_a_cache(cache);
+    return 0;
+}
