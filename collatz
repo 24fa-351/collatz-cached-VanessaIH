@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string.h>
 
+//typedef is struct MyStruct(idea is still a bit confusing)
 typedef struct cachenode {
     int number_of_callatz_steps;
     int numbers_that_reach_to_one;
@@ -19,6 +20,7 @@ typedef struct cache {
 } cache;
 
 cache* making_a_new_cach(int max_capacity) {
+    //malloc is memory allocation, allocing the size of the cache
     cache* new_cache = (cache*)malloc(sizeof(cache));
 
     if(!new_cache) {
@@ -52,7 +54,7 @@ void deleting_a_cache(cache* cache) {
         free(cache->hash_table);
         free(cache);
 }
-
+ //errors appeared due to referencing number of steps not numbers that reach to one
 void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach_to_one) {
     if (cache->number_of_elements >= cache->max_capacity) {
         removing_cache_with_fifo_and_lru(cache);
@@ -60,7 +62,9 @@ void put_cache(cache* cache, int number_of_callatz_steps, int numbers_that_reach
 
     unsigned int index = hash(number_of_callatz_steps, cache->max_capacity);
     cachenode* new_node = (cachenode*)malloc(sizeof(cachenode));
+    
     new_node->number_of_callatz_steps = number_of_callatz_steps;
+    //error was happening here
     new_node->numbers_that_reach_to_one = numbers_that_reach_to_one;
     new_node->next = cache->hash_table[index];
     cache->hash_table[index] = new_node;
@@ -97,6 +101,7 @@ int calculcating_steps(int n) {
 }
 
 void removing_cache_with_fifo_and_lru(cache* cache) {
+    //reference to 131
     if (cache->deletion_list != NULL) {
         cachenode* old_cache = cache->deletion_list;
         cache->deletion_list = cache->deletion_list->next;
@@ -140,7 +145,9 @@ int main(int argc, char* argv[]) {
     srand(time(NULL));
 
     for (int i = 0; i < N; i++) {
+        //formating of a random number to calc steps
         int random_number = rand() % (MAX - MIN + 1) + MIN;
+        //CPU clock ticks is in clock_t(can hold large numbers)
         clock_t start = clock();
 
         int steps = get_cache(cache, random_number);
@@ -148,7 +155,9 @@ int main(int argc, char* argv[]) {
             steps = calculcating_steps(random_number);
             put_cache(cache, random_number, steps);
         }
+        //clocks_per_sec converts and (double) makes the format into doubles
         total_time += (double)(clock() - start) / CLOCKS_PER_SEC;
+        //could be one line, but this is personal preferred formatting
         printf("Random Number: %d\n", random_number);
         printf("Steps: %d", steps);
     }
